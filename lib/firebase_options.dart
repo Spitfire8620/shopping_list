@@ -49,6 +49,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '455891680094',
     projectId: 'shopping-list-app-840ca',
     authDomain: 'shopping-list-app-840ca.firebaseapp.com',
+    databaseURL: 'https://shopping-list-app-840ca-default-rtdb.firebaseio.com',
     storageBucket: 'shopping-list-app-840ca.firebasestorage.app',
     measurementId: 'G-WR7J8NFT92',
   );
@@ -58,6 +59,7 @@ class DefaultFirebaseOptions {
     appId: '1:455891680094:android:262a3ea070c133c3762dcf',
     messagingSenderId: '455891680094',
     projectId: 'shopping-list-app-840ca',
+    databaseURL: 'https://shopping-list-app-840ca-default-rtdb.firebaseio.com',
     storageBucket: 'shopping-list-app-840ca.firebasestorage.app',
   );
 
@@ -66,6 +68,7 @@ class DefaultFirebaseOptions {
     appId: '1:455891680094:ios:1d6273d7f3494af1762dcf',
     messagingSenderId: '455891680094',
     projectId: 'shopping-list-app-840ca',
+    databaseURL: 'https://shopping-list-app-840ca-default-rtdb.firebaseio.com',
     storageBucket: 'shopping-list-app-840ca.firebasestorage.app',
     iosBundleId: 'com.example.shoppingList',
   );
@@ -75,6 +78,7 @@ class DefaultFirebaseOptions {
     appId: '1:455891680094:ios:1d6273d7f3494af1762dcf',
     messagingSenderId: '455891680094',
     projectId: 'shopping-list-app-840ca',
+    databaseURL: 'https://shopping-list-app-840ca-default-rtdb.firebaseio.com',
     storageBucket: 'shopping-list-app-840ca.firebasestorage.app',
     iosBundleId: 'com.example.shoppingList',
   );
