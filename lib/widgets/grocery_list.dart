@@ -1,5 +1,5 @@
+// grocery_list.dart (ESSENTIAL PATTERN)
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shopping_list/data/categories.dart';
@@ -14,89 +14,46 @@ class GroceryList extends StatefulWidget {
 }
 
 class _GroceryListState extends State<GroceryList> {
-  List<GroceryItem> _groceryItems = [];
-  late Future<List<GroceryItem>> _loadedItems;
-  String? _error;
+  late Future<List<GroceryItem>> _itemsFuture;
 
   @override
   void initState() {
     super.initState();
-    _loadedItems = _loadItems();
+    _itemsFuture = _loadItems();
   }
 
   Future<List<GroceryItem>> _loadItems() async {
     final url = Uri.https(
-  'shopping-list-app-840ca-default-rtdb.firebaseio.com',
-  'shopping-list.json',
-);
+      'shopping-list-app-840ca-default-rtdb.firebaseio.com',
+      'shopping-list.json',
+    );
 
-    final response = await http.get(url);
+    final res = await http.get(url);
+    debugPrint('GET ${url.toString()} -> ${res.statusCode} ${res.body}');
 
-    if (response.statusCode >= 400) {
-      throw Exception('Failed to fetch grocery items. Please try again later.');
+    if (res.statusCode != 200) {
+      throw Exception('HTTP ${res.statusCode}: ${res.body}');
+    }
+    if (res.body == 'null' || res.body.trim().isEmpty) {
+      return []; // empty DB
     }
 
-   if (response.body.trim().isEmpty || response.body == 'null') {
-    _groceryItems = [];            
-    return [];
-  }
-
-    final Map<String, dynamic> listData = json.decode(response.body);
-    final List<GroceryItem> loadedItems = [];
-    for (final item in listData.entries) {
+    final data = json.decode(res.body) as Map<String, dynamic>;
+    final List<GroceryItem> loaded = [];
+    data.forEach((id, value) {
       final category = categories.entries
-          .firstWhere(
-              (catItem) => catItem.value.title == item.value['category'])
+          .firstWhere((e) => e.value.title == value['category'])
           .value;
-      loadedItems.add(
+      loaded.add(
         GroceryItem(
-          id: item.key,
-          name: item.value['name'],
-          quantity: item.value['quantity'],
+          id: id,
+          name: value['name'],
+          quantity: value['quantity'],
           category: category,
         ),
       );
-    }
-    _groceryItems = loadedItems;
-    return loadedItems;
-  }
-
-  void _addItem() async {
-  final newItem = await Navigator.of(context).push<GroceryItem>(
-    MaterialPageRoute(builder: (ctx) => const NewItem()),
-  );
-  if (newItem == null) return;
-
-  _groceryItems.add(newItem);
-
-  setState(() {
-    _loadedItems = _loadItems();
-  });
-}
-
-
-  void _removeItem(GroceryItem item) async {
-    final index = _groceryItems.indexOf(item);
-    setState(() {
-      _groceryItems.remove(item);
     });
-
-    final url = Uri.https('shopping-list-app-840ca-default-rtdb.firebaseio.com',
-        'shopping-list/${item.id}.json');
-
-    final response = await http.delete(url);
-
-    if (response.statusCode >= 400) {
-      // Optional: Show error message
-      setState(() {
-        _groceryItems.insert(index, item);
-      });
-    }
-      else {
-    setState(() {
-      _loadedItems = _loadItems();
-    });
-    }
+    return loaded;
   }
 
   @override
@@ -106,49 +63,64 @@ class _GroceryListState extends State<GroceryList> {
         title: const Text('Your Groceries'),
         actions: [
           IconButton(
-            onPressed: _addItem,
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (ctx) => const NewItem()),
+              );
+              setState(() {
+                _itemsFuture = _loadItems();
+              });
+            },
             icon: const Icon(Icons.add),
           ),
         ],
       ),
-      body: FutureBuilder(
-        future: _loadedItems,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: FutureBuilder<List<GroceryItem>>(
+        future: _itemsFuture,
+        builder: (ctx, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-
-          if (snapshot.hasError) {
+          if (snap.hasError) {
             return Center(
-              child: Text(
-                snapshot.error.toString(),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Failed to load items:\n${snap.error}',
+                  textAlign: TextAlign.center,
+                ),
               ),
             );
           }
-
-          if (snapshot.data!.isEmpty) {
-            return const Center(child: Text('No items added yet.'));
+          final items = snap.data ?? [];
+          if (items.isEmpty) {
+            return const Center(child: Text('No items yet. Tap + to add one.'));
           }
-
           return ListView.builder(
-            itemCount: snapshot.data!.length,
-            itemBuilder: (ctx, index) => Dismissible(
-              onDismissed: (direction) {
-                _removeItem(snapshot.data![index]);
-              },
-              key: ValueKey(snapshot.data![index].id),
-              child: ListTile(
-                title: Text(snapshot.data![index].name),
-                leading: Container(
-                  width: 24,
-                  height: 24,
-                  color: snapshot.data![index].category.color,
+            itemCount: items.length,
+            itemBuilder: (ctx, i) {
+              final item = items[i];
+              return Dismissible(
+                key: ValueKey(item.id),
+                onDismissed: (_) async {
+                  final url = Uri.https(
+                    'shopping-list-app-840ca-default-rtdb.firebaseio.com',
+                    'shopping-list/${item.id}.json',
+                  );
+                  final del = await http.delete(url);
+                  debugPrint('DELETE ${url.toString()} -> ${del.statusCode}');
+                },
+                child: ListTile(
+                  title: Text(item.name),
+                  leading: Container(
+                    width: 24,
+                    height: 24,
+                    color: item.category.color,
+                  ),
+                  trailing: Text(item.quantity.toString()),
                 ),
-                trailing: Text(
-                  snapshot.data![index].quantity.toString(),
-                ),
-              ),
-            ),
+              );
+            },
           );
         },
       ),
